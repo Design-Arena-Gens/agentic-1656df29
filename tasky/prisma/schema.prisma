@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id
+  email      String   @unique
+  firstName  String?
+  lastName   String?
+  imageUrl   String?
+  boards     Board[]  @relation("BoardOwner")
+  tasks      Task[]   @relation("TaskAssignee")
+  comments   Comment[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Board {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  ownerId     String
+  owner       User          @relation("BoardOwner", fields: [ownerId], references: [id])
+  columns     Column[]
+  tasks       Task[]
+  isArchived  Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([ownerId])
+}
+
+model Column {
+  id        String   @id @default(cuid())
+  name      String
+  position  Int
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([boardId, position])
+  @@index([boardId])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  position    Int
+  dueDate     DateTime?
+  boardId     String
+  board       Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  columnId    String
+  column      Column     @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  comments    Comment[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([columnId, position])
+  @@index([boardId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
